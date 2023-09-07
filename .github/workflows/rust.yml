@@ -2,8 +2,6 @@ on: [push, pull_request]
 
 name: CI
 
-env:
-
 jobs:
   check:
     name: Check
