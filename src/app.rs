@@ -38,6 +38,8 @@ pub struct ModViewModel {
     pub path: PathBuf,
     pub name: String,
     pub enabled: bool,
+    pub overlay_enabled: bool,
+    pub gmsts: Vec<String>,
 }
 
 /// Catpuccino themes
@@ -57,11 +59,31 @@ pub fn get_theme(theme: &ETheme) -> catppuccin_egui::Theme {
     }
 }
 
+/// App scale
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum EScale {
+    Native,
+    Small,
+    Medium,
+    Large,
+}
+impl From<EScale> for f32 {
+    fn from(val: EScale) -> Self {
+        match val {
+            EScale::Native => 1.2,
+            EScale::Small => 2.0,
+            EScale::Medium => 3.0,
+            EScale::Large => 4.0,
+        }
+    }
+}
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     pub theme: ETheme,
+    pub scale: EScale,
 
     // ui
     #[serde(skip)]
@@ -73,6 +95,8 @@ pub struct TemplateApp {
     pub default_gmsts: HashMap<String, EGmstValue>,
     #[serde(skip)]
     pub gmst_vms: Vec<GmstViewModel>,
+    // #[serde(skip)]
+    // pub mod_gmst_vms: Option<HashMap<String, EGmstValue>>,
 
     // runtime
     #[serde(skip)]
@@ -91,6 +115,8 @@ impl Default for TemplateApp {
             gmst_vms: vec![],
             search_filter: "".to_owned(),
             display_edited: false,
+            //mod_gmst_vms: None,
+            scale: EScale::Small,
         };
 
         s.gmst_vms = rebuild_vms(&s.default_gmsts);
@@ -145,44 +171,55 @@ fn parse_gmsts() -> HashMap<String, EGmstValue> {
             if split.len() == 2 {
                 let name = split[0].trim();
                 let value = split[1].trim();
-                let first_char: char = name.chars().next().unwrap();
-
-                match first_char {
-                    'b' => {
-                        // parse bool
-                        if let Some(parsed) = match value {
-                            "True" => Some(true),
-                            "False" => Some(false),
-                            _ => None,
-                        } {
-                            map.insert(name.to_owned(), EGmstValue::Bool(parsed));
-                        }
-                    }
-                    'f' => {
-                        // parse float
-                        if let Ok(parsed) = value.parse::<f32>() {
-                            map.insert(name.to_owned(), EGmstValue::Float(parsed));
-                        }
-                    }
-                    'i' => {
-                        // parse float
-                        if let Ok(parsed) = value.parse::<i32>() {
-                            map.insert(name.to_owned(), EGmstValue::Int(parsed));
-                        }
-                    }
-                    'u' => {
-                        // parse float
-                        if let Ok(parsed) = value.parse::<u32>() {
-                            map.insert(name.to_owned(), EGmstValue::UInt(parsed));
-                        }
-                    }
-                    _ => {}
+                if let Some(parsed) = parse_gmst(name, value) {
+                    map.insert(name.to_owned(), parsed);
                 }
             }
         }
     });
 
     map
+}
+
+fn parse_gmst(name: &str, value: &str) -> Option<EGmstValue> {
+    let first_char: char = name.chars().next().unwrap();
+
+    match first_char {
+        'b' => {
+            // parse bool
+            match value.to_lowercase().as_str() {
+                "true" => Some(true),
+                "false" => Some(false),
+                _ => None,
+            }
+            .map(EGmstValue::Bool)
+        }
+        'f' => {
+            // parse float
+            if let Ok(parsed) = value.parse::<f32>() {
+                Some(EGmstValue::Float(parsed))
+            } else {
+                None
+            }
+        }
+        'i' => {
+            // parse float
+            if let Ok(parsed) = value.parse::<i32>() {
+                Some(EGmstValue::Int(parsed))
+            } else {
+                None
+            }
+        }
+        'u' => {
+            // parse float
+            if let Ok(parsed) = value.parse::<u32>() {
+                Some(EGmstValue::UInt(parsed))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
 }
 
 static ROW_WIDTH: f32 = 50_f32;
@@ -206,8 +243,10 @@ impl eframe::App for TemplateApp {
             gmst_vms,
             search_filter,
             display_edited,
+            scale,
         } = self;
 
+        ctx.set_pixels_per_point(f32::from(*scale));
         catppuccin_egui::set_theme(ctx, get_theme(theme));
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -222,7 +261,16 @@ impl eframe::App for TemplateApp {
                 // theme button on right
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
                     // theme
-                    theme_switch(ui, &mut self.theme);
+                    theme_switch(ui, theme);
+                    // scale
+                    egui::ComboBox::from_label("Scale: ")
+                        .selected_text(format!("{:?}", scale))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(scale, EScale::Native, "Native");
+                            ui.selectable_value(scale, EScale::Small, "Small");
+                            ui.selectable_value(scale, EScale::Medium, "Medium");
+                            ui.selectable_value(scale, EScale::Large, "Large");
+                        });
                     egui::warn_if_debug_build(ui);
                 });
             });
@@ -256,12 +304,18 @@ impl eframe::App for TemplateApp {
                     if ui
                         .button(
                             egui::RichText::new("🖹 Create command file")
-                                .size(18.0)
+                                .size(14.0)
                                 .color(Color32::GREEN),
                         )
                         .clicked()
                     {
-                        let save_path = PathBuf::from(format!("./Data/{}.txt", BAT_NAME));
+                        let save_path = if is_mo2() {
+                            PathBuf::from("")
+                                .join("Data")
+                                .join(format!("{}.txt", BAT_NAME))
+                        } else {
+                            PathBuf::from("").join(format!("{}.txt", BAT_NAME))
+                        };
                         save_to_file(gmst_vms, &save_path);
                         //add_command_to_ini(toasts, BAT_NAME);
                         toasts.success(format!("Created file: {}", save_path.display()));
@@ -271,7 +325,7 @@ impl eframe::App for TemplateApp {
                     if ui
                         .button(
                             egui::RichText::new("🖹 Save to esm")
-                                .size(18.0)
+                                .size(14.0)
                                 .color(Color32::GREEN),
                         )
                         .clicked()
@@ -319,12 +373,12 @@ impl eframe::App for TemplateApp {
                                 continue;
                             }
 
-                            if *display_edited && !vm.is_edited {
-                                continue;
-                            }
-
                             if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
                                 vm.is_edited = !default_value.eq(&vm.gmst.value);
+                            }
+
+                            if *display_edited && !vm.is_edited {
+                                continue;
                             }
 
                             if vm.is_edited {
@@ -377,7 +431,8 @@ impl eframe::App for TemplateApp {
             ui.separator();
 
             // main grid
-            ui.label("Active mods. Change load order by reordering.");
+            ui.heading("Active mods");
+            ui.label("Change load order by reordering.");
             if let Some(mods) = mods_option {
                 ui.horizontal(|ui| {
                     if ui.button("Refresh").clicked() {
@@ -393,8 +448,16 @@ impl eframe::App for TemplateApp {
                                 .as_slice(),
                         );
                     }
+                    if ui.button("Open folder").clicked() {
+                        let path = if is_mo2() {
+                            PathBuf::from("").join("Data")
+                        } else {
+                            PathBuf::from("")
+                        };
+                        let _r = open::that(path);
+                    }
                 });
-
+                ui.separator();
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let response =
                         egui_dnd::dnd(ui, "dnd").show_vec(mods, |ui, mod_vm, handle, _dragging| {
@@ -409,36 +472,91 @@ impl eframe::App for TemplateApp {
                                 if r.clicked() {
                                     if mod_vm.enabled {
                                         // copy file
-                                        match std::fs::copy(
-                                            &mod_vm.path,
-                                            format!("./{}", mod_vm.name),
-                                        ) {
-                                            Ok(_) => {
-                                                toasts.success(format!("{} enabled", mod_vm.name));
+                                        if is_mo2() {
+                                            match std::fs::copy(&mod_vm.path, &mod_vm.name) {
+                                                Ok(_) => {
+                                                    toasts.success(format!(
+                                                        "{} enabled",
+                                                        mod_vm.name
+                                                    ));
+                                                }
+                                                Err(_) => {
+                                                    toasts.error(format!(
+                                                        "failed to install {}",
+                                                        mod_vm.name
+                                                    ));
+                                                }
                                             }
-                                            Err(_) => {
-                                                toasts.error(format!(
-                                                    "failed to install {}",
-                                                    mod_vm.name
-                                                ));
-                                            }
+                                        } else {
+                                            toasts.success(format!("{} enabled", mod_vm.name));
                                         }
                                     } else {
                                         // delete file
-                                        match std::fs::remove_file(format!("./{}", mod_vm.name)) {
-                                            Ok(_) => {
-                                                toasts.info(format!("{} disabled", mod_vm.name));
+                                        if is_mo2() {
+                                            match std::fs::remove_file(&mod_vm.name) {
+                                                Ok(_) => {
+                                                    toasts
+                                                        .info(format!("{} disabled", mod_vm.name));
+                                                }
+                                                Err(_) => {
+                                                    toasts.error(format!(
+                                                        "failed to remove {}",
+                                                        mod_vm.name
+                                                    ));
+                                                }
                                             }
-                                            Err(_) => {
-                                                toasts.error(format!(
-                                                    "failed to remove {}",
-                                                    mod_vm.name
-                                                ));
+                                        } else {
+                                            toasts.info(format!("{} disabled", mod_vm.name));
+                                        }
+                                    }
+                                }
+
+                                ui.label(mod_vm.name.to_owned());
+
+                                let r = ui.toggle_value(&mut mod_vm.overlay_enabled, "Toggle show");
+                                if r.clicked() {
+                                    if mod_vm.overlay_enabled {
+                                        // check if a gmst mod
+                                        if let Ok(lines) = read_lines(&mod_vm.path) {
+                                            let mut map: Vec<String> = vec![];
+                                            for line in lines.flatten() {
+                                                if let Some(pair) = line.strip_prefix("setgs ") {
+                                                    let splits =
+                                                        pair.split(' ').collect::<Vec<_>>();
+                                                    if splits.len() == 2 {
+                                                        let name = splits[0];
+                                                        if let Some(parsed) =
+                                                            parse_gmst(name, splits[1])
+                                                        {
+                                                            //map.insert(name.to_owned(), parsed);
+                                                            map.push(name.to_owned());
+                                                            // change values
+                                                            if let Some(val) = gmst_vms
+                                                                .iter_mut()
+                                                                .find(|p| p.gmst.name == name)
+                                                            {
+                                                                val.gmst.value = parsed;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            //*mod_gmst_vms = Some(map);
+                                            mod_vm.gmsts = map;
+                                        }
+                                    } else {
+                                        // revert
+                                        for g in mod_vm.gmsts.iter_mut() {
+                                            if let Some(val) =
+                                                gmst_vms.iter_mut().find(|p| p.gmst.name == *g)
+                                            {
+                                                if let Some(default_value) = default_gmsts.get(g) {
+                                                    val.gmst.value = *default_value;
+                                                }
                                             }
                                         }
                                     }
                                 }
-                                ui.label(mod_vm.name.to_owned());
                             });
                         });
 
@@ -481,7 +599,13 @@ impl eframe::App for TemplateApp {
 /// Gets all txt file mods in the base dir.
 fn refresh_mods() -> Vec<ModViewModel> {
     let mut mod_map: Vec<ModViewModel> = vec![];
-    for entry in read_dir("./Data").unwrap().flatten() {
+    let path = if is_mo2() {
+        PathBuf::from("").join("Data")
+    } else {
+        PathBuf::from("")
+    };
+
+    for entry in read_dir(path).unwrap().flatten() {
         let path = entry.path();
         if path.exists() && path.is_file() {
             if let Some(name) = path.file_name() {
@@ -491,7 +615,9 @@ fn refresh_mods() -> Vec<ModViewModel> {
                         mod_map.push(ModViewModel {
                             path: path.to_owned(),
                             name: name.to_str().unwrap().into(),
-                            enabled: PathBuf::from("./").join(name).exists(),
+                            enabled: PathBuf::from("").join(name).exists(),
+                            overlay_enabled: false,
+                            gmsts: vec![],
                         });
                     }
                 }
@@ -499,11 +625,7 @@ fn refresh_mods() -> Vec<ModViewModel> {
         }
     }
 
-    // println!("before");
-    // for m in mod_map.iter() {
-    //     println!("{}", m.name);
-    // }
-
+    // sort by load order
     if let Some(order) = get_bat_order() {
         let mut ordered: Vec<ModViewModel> = vec![];
         for o in order {
@@ -519,37 +641,21 @@ fn refresh_mods() -> Vec<ModViewModel> {
             }
         }
 
-        // println!("after");
-        // for m in ordered.iter() {
-        //     println!("{}", m.name);
-        // }
-
         ordered
     } else {
         mod_map
     }
 }
 
-// check if a gmst mod
-// if let Ok(lines) = read_lines(&path) {
-//     // Consumes the iterator, returns an (Optional) String
-//     for line in lines.flatten() {
-//         if line.starts_with("setgs ") {
-//             mod_map.push(path);
-//             break;
-//         }
-//     }
-// }
-
-// // The output is wrapped in a Result to allow matching on errors
-// // Returns an Iterator to the Reader of the lines of the file.
-// fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-// where
-//     P: AsRef<Path>,
-// {
-//     let file = File::open(filename)?;
-//     Ok(io::BufReader::new(file).lines())
-// }
+// The output is wrapped in a Result to allow matching on errors
+// Returns an Iterator to the Reader of the lines of the file.
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where
+    P: AsRef<std::path::Path>,
+{
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
+}
 
 fn get_bat_order() -> Option<Vec<String>> {
     // checks
@@ -703,4 +809,11 @@ fn theme_switch(ui: &mut egui::Ui, theme: &mut ETheme) {
             ui.selectable_value(theme, ETheme::Macchiato, "MACCHIATO");
             ui.selectable_value(theme, ETheme::Mocha, "MOCHA");
         });
+}
+
+fn is_mo2() -> bool {
+    if let Some(arg1) = env::args().nth(1) {
+        return arg1 == "--mo2";
+    }
+    false
 }
