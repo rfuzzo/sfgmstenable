@@ -1,6 +1,6 @@
-# STarfield GMST editor
+# Starfield GMST editor
 
-A simple UI to edit Starfield GMSTs.
+A simple UI to edit Starfield GMSTs and manage bat file mods.
 
 ## Features
 
