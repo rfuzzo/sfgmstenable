@@ -1,3 +1,4 @@
+use std::env;
 use std::fs::read_dir;
 use std::io::Write;
 use std::{
@@ -6,7 +7,6 @@ use std::{
     io::{self, BufRead},
     path::PathBuf,
 };
-use std::{env, fs};
 
 use directories::UserDirs;
 use egui::Color32;
@@ -261,8 +261,10 @@ impl eframe::App for TemplateApp {
                         )
                         .clicked()
                     {
-                        save_to_file(gmst_vms, BAT_NAME);
+                        let save_path = PathBuf::from(format!("./Data/{}.txt", BAT_NAME));
+                        save_to_file(gmst_vms, &save_path);
                         //add_command_to_ini(toasts, BAT_NAME);
+                        toasts.success(format!("Created file: {}", save_path.display()));
                         *mods_option = Some(refresh_mods());
                     }
 
@@ -275,7 +277,7 @@ impl eframe::App for TemplateApp {
                         .clicked()
                     {
                         // parse esm
-                        todo!()
+                        toasts.warning("Not implemented yet");
                     }
                 });
             });
@@ -407,7 +409,10 @@ impl eframe::App for TemplateApp {
                                 if r.clicked() {
                                     if mod_vm.enabled {
                                         // copy file
-                                        match fs::copy(&mod_vm.path, format!("./{}", mod_vm.name)) {
+                                        match std::fs::copy(
+                                            &mod_vm.path,
+                                            format!("./{}", mod_vm.name),
+                                        ) {
                                             Ok(_) => {
                                                 toasts.success(format!("{} enabled", mod_vm.name));
                                             }
@@ -420,7 +425,7 @@ impl eframe::App for TemplateApp {
                                         }
                                     } else {
                                         // delete file
-                                        match fs::remove_file(format!("./{}", mod_vm.name)) {
+                                        match std::fs::remove_file(format!("./{}", mod_vm.name)) {
                                             Ok(_) => {
                                                 toasts.info(format!("{} disabled", mod_vm.name));
                                             }
@@ -473,7 +478,7 @@ impl eframe::App for TemplateApp {
     }
 }
 
-/// Gets all txt file mods in the Data dir.
+/// Gets all txt file mods in the base dir.
 fn refresh_mods() -> Vec<ModViewModel> {
     let mut mod_map: Vec<ModViewModel> = vec![];
     for entry in read_dir("./Data").unwrap().flatten() {
@@ -578,9 +583,9 @@ fn get_bat_order() -> Option<Vec<String>> {
 }
 
 /// Saves currently edited GMSTs to a file
-fn save_to_file(gmst_vms: &[GmstViewModel], bat_name: &str) {
+fn save_to_file(gmst_vms: &[GmstViewModel], path: &PathBuf) {
     // save to file
-    if let Ok(mut file) = File::create(format!("./Data/{}.txt", bat_name)) {
+    if let Ok(mut file) = File::create(path) {
         // get all edited
         for vm in gmst_vms.iter().filter(|p| p.is_edited) {
             // write to file
