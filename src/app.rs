@@ -432,7 +432,7 @@ impl eframe::App for TemplateApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Starfield GMST editor");
+            ui.heading(format!("Starfield GMST editor v{}", VERSION));
             ui.hyperlink("https://github.com/rfuzzo/sfgmstenable");
             ui.separator();
 
