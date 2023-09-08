@@ -1,6 +1,6 @@
 [package]
 name = "sf_gmst_editor"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["rfuzzo"]
 edition = "2021"
 
