@@ -227,6 +227,7 @@ fn parse_gmst(name: &str, value: &str) -> Option<EGmstValue> {
     }
 }
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 static ROW_WIDTH: f32 = 50_f32;
 static BAT_NAME: &str = "my_gmsts";
 //static BAT_NAME_MERGED: &str = "merged_gmsts";
@@ -285,7 +286,7 @@ impl eframe::App for TemplateApp {
             if !cwd.join("Starfield.exe").exists() {
                 // then we are in the wrong dir
                 egui::CentralPanel::default().show(ctx, |ui| {
-                    ui.heading("Starfield GMST editor");
+                    ui.heading(format!("Starfield GMST editor v{}", VERSION));
                     ui.hyperlink("https://github.com/rfuzzo/sfgmstenable");
                     ui.separator();
 
@@ -797,7 +798,11 @@ fn add_command_to_ini(toasts: &mut Toasts, commands: &[String]) {
 fn get_command_line(commands: &[String]) -> String {
     let mut collected_line = "".to_owned();
     for c in commands {
-        collected_line += format!("bat {};", c).as_str();
+        let mut name = c.to_owned();
+        if c.ends_with(".txt") {
+            name = name[..c.len() - 4].to_owned();
+        }
+        collected_line += format!("bat {};", name).as_str();
     }
     let start_command = format!("sStartingConsoleCommand={}", collected_line);
     start_command
