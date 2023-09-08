@@ -160,25 +160,30 @@ impl TemplateApp {
 fn parse_gmsts() -> HashMap<String, EGmstValue> {
     let mut map: HashMap<String, EGmstValue> = HashMap::default();
 
-    let bytes = include_bytes!("Starfield_Game_Settings.txt");
-    let reader = io::BufReader::new(bytes.as_slice());
+    let bytes1 = include_bytes!("Starfield_Game_Settings.csv");
+    add_from_bytes(bytes1, &mut map);
 
-    // Consumes the iterator, returns an (Optional) String
+    let bytes2 = include_bytes!("ghidra_gmsts.csv");
+    add_from_bytes(bytes2, &mut map);
+
+    map
+}
+
+fn add_from_bytes(bytes: &[u8], map: &mut HashMap<String, EGmstValue>) {
+    let reader = io::BufReader::new(bytes);
     reader.lines().for_each(|line| {
         if let Ok(str) = line {
             // parse first char
-            let split: Vec<_> = str.split('=').collect();
+            let split: Vec<_> = str.split(',').collect();
             if split.len() == 2 {
                 let name = split[0].trim();
                 let value = split[1].trim();
                 if let Some(parsed) = parse_gmst(name, value) {
-                    map.insert(name.to_owned(), parsed);
+                    map.entry(name.to_owned()).or_insert(parsed);
                 }
             }
         }
     });
-
-    map
 }
 
 fn parse_gmst(name: &str, value: &str) -> Option<EGmstValue> {
