@@ -40,6 +40,7 @@ pub struct ModViewModel {
     pub enabled: bool,
     pub overlay_enabled: bool,
     pub gmsts: Vec<String>,
+    pub txt: Option<String>,
 }
 
 /// Catpuccino themes
@@ -103,6 +104,8 @@ pub struct TemplateApp {
     pub search_filter: String,
     #[serde(skip)]
     pub display_edited: bool,
+    #[serde(skip)]
+    pub selected_mod: Option<ModViewModel>,
 }
 
 impl Default for TemplateApp {
@@ -117,6 +120,7 @@ impl Default for TemplateApp {
             display_edited: false,
             //mod_gmst_vms: None,
             scale: EScale::Small,
+            selected_mod: None,
         };
 
         s.gmst_vms = rebuild_vms(&s.default_gmsts);
@@ -250,6 +254,7 @@ impl eframe::App for TemplateApp {
             search_filter,
             display_edited,
             scale,
+            selected_mod,
         } = self;
 
         ctx.set_pixels_per_point(f32::from(*scale));
@@ -326,18 +331,6 @@ impl eframe::App for TemplateApp {
                         //add_command_to_ini(toasts, BAT_NAME);
                         toasts.success(format!("Created file: {}", save_path.display()));
                         *mods_option = Some(refresh_mods());
-                    }
-
-                    if ui
-                        .button(
-                            egui::RichText::new("🖹 Save to esm")
-                                .size(14.0)
-                                .color(Color32::GREEN),
-                        )
-                        .clicked()
-                    {
-                        // parse esm
-                        toasts.warning("Not implemented yet");
                     }
                 });
             });
@@ -436,7 +429,7 @@ impl eframe::App for TemplateApp {
             ui.hyperlink("https://github.com/rfuzzo/sfgmstenable");
             ui.separator();
 
-            // main grid
+            // mods grid
             ui.heading("Active mods");
             ui.label("Change load order by reordering.");
             if let Some(mods) = mods_option {
@@ -468,14 +461,12 @@ impl eframe::App for TemplateApp {
                     let response =
                         egui_dnd::dnd(ui, "dnd").show_vec(mods, |ui, mod_vm, handle, _dragging| {
                             ui.horizontal(|ui| {
-                                let _clicked = handle
-                                    .sense(egui::Sense::click())
-                                    .ui(ui, |ui| {
-                                        ui.label("::");
-                                    })
-                                    .clicked();
-                                let r = ui.checkbox(&mut mod_vm.enabled, "");
-                                if r.clicked() {
+                                handle.ui(ui, |ui| {
+                                    ui.label("::");
+                                });
+
+                                // enabled checkbox
+                                if ui.checkbox(&mut mod_vm.enabled, "").clicked() {
                                     if mod_vm.enabled {
                                         // copy file
                                         if is_mo2() {
@@ -517,10 +508,21 @@ impl eframe::App for TemplateApp {
                                     }
                                 }
 
+                                // mod name
                                 ui.label(mod_vm.name.to_owned());
+                                if ui.button("🖹").clicked() {
+                                    // read file
+                                    if let Ok(txt) = std::fs::read_to_string(&mod_vm.path) {
+                                        mod_vm.txt = Some(txt);
+                                        *selected_mod = Some(mod_vm.to_owned());
+                                    }
+                                }
 
-                                let r = ui.toggle_value(&mut mod_vm.overlay_enabled, "Toggle show");
-                                if r.clicked() {
+                                // toggle show mod values
+                                if ui
+                                    .toggle_value(&mut mod_vm.overlay_enabled, "Toggle show")
+                                    .clicked()
+                                {
                                     if mod_vm.overlay_enabled {
                                         // check if a gmst mod
                                         if let Ok(lines) = read_lines(&mod_vm.path) {
@@ -568,15 +570,6 @@ impl eframe::App for TemplateApp {
 
                     if response.is_drag_finished() {
                         response.update_vec(mods);
-                        // update ini
-                        // add_command_to_ini(
-                        //     toasts,
-                        //     mods.iter()
-                        //         .filter(|p| p.enabled)
-                        //         .map(|p| p.name.to_owned())
-                        //         .collect::<Vec<_>>()
-                        //         .as_slice(),
-                        // );
                     }
                 });
 
@@ -591,9 +584,25 @@ impl eframe::App for TemplateApp {
                 ui.horizontal(|ui| {
                     ui.label("Start commands: ");
                     ui.add_enabled_ui(false, |ui| {
-                        ui.text_edit_multiline(&mut start_command);
+                        ui.add_sized(
+                            ui.available_size(),
+                            egui::TextEdit::multiline(&mut start_command),
+                        );
                     });
                 });
+
+                if let Some(selected_mod) = selected_mod {
+                    ui.separator();
+                    ui.label(selected_mod.name.to_owned());
+                    if let Some(mut mod_text) = selected_mod.txt.to_owned() {
+                        ui.add_enabled_ui(false, |ui| {
+                            ui.add_sized(
+                                ui.available_size(),
+                                egui::TextEdit::multiline(&mut mod_text),
+                            );
+                        });
+                    }
+                }
             }
         });
 
@@ -624,6 +633,7 @@ fn refresh_mods() -> Vec<ModViewModel> {
                             enabled: PathBuf::from("").join(name).exists(),
                             overlay_enabled: false,
                             gmsts: vec![],
+                            txt: None,
                         });
                     }
                 }
