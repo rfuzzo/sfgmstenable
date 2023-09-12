@@ -1993,7 +1993,7 @@ dependencies = [
 
 [[package]]
 name = "sf_gmst_editor"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "catppuccin-egui",
  "directories",

@@ -1,4 +1,5 @@
 use std::env;
+use std::fmt::Display;
 use std::fs::read_dir;
 use std::io::Write;
 use std::{
@@ -19,6 +20,21 @@ pub enum EGmstValue {
     Float(f32),
     Int(i32),
     UInt(u32),
+}
+
+impl Display for EGmstValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            EGmstValue::Bool(b) => match b {
+                true => "True".to_string(),
+                false => "False".to_string(),
+            },
+            EGmstValue::Float(f) => f.to_string(),
+            EGmstValue::Int(i) => i.to_string(),
+            EGmstValue::UInt(u) => u.to_string(),
+        };
+        write!(f, "{}", s)
+    }
 }
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq)]
@@ -372,6 +388,7 @@ impl eframe::App for TemplateApp {
                                 continue;
                             }
 
+                            // get values
                             if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
                                 vm.is_edited = !default_value.eq(&vm.gmst.value);
                             }
@@ -386,11 +403,21 @@ impl eframe::App for TemplateApp {
                                 ui.visuals_mut().override_text_color = None;
                             }
 
+                            // edited checkbox
                             ui.add_enabled_ui(false, |ui| {
                                 ui.checkbox(&mut vm.is_edited, "Edited");
                             });
 
-                            ui.label(vm.gmst.name.to_owned());
+                            // mod name
+                            let mut mod_name = vm.gmst.name.to_owned();
+                            if vm.is_edited {
+                                if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
+                                    mod_name = format!("{} ({})", mod_name, default_value);
+                                }
+                            }
+                            ui.label(mod_name);
+
+                            // mod value
                             match vm.gmst.value {
                                 EGmstValue::Bool(mut b) => {
                                     ui.checkbox(&mut b, "");
@@ -410,13 +437,12 @@ impl eframe::App for TemplateApp {
                                 }
                             }
 
-                            //ui.add_enabled_ui(vm.is_edited, |ui| {
+                            // Reset
                             if vm.is_edited && ui.button("Reset").clicked() {
                                 if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
                                     vm.gmst.value = *default_value;
                                 }
                             }
-                            //});
 
                             ui.end_row();
                         }
@@ -434,20 +460,10 @@ impl eframe::App for TemplateApp {
             ui.label("Change load order by reordering.");
             if let Some(mods) = mods_option {
                 ui.horizontal(|ui| {
-                    if ui.button("Refresh").clicked() {
+                    if ui.button("↻ Refresh").clicked() {
                         *mods = refresh_mods();
                     }
-                    if ui.button("Save").clicked() {
-                        add_command_to_ini(
-                            toasts,
-                            mods.iter()
-                                .filter(|p| p.enabled)
-                                .map(|p| p.name.to_owned())
-                                .collect::<Vec<_>>()
-                                .as_slice(),
-                        );
-                    }
-                    if ui.button("Open folder").clicked() {
+                    if ui.button("🗁 Open folder").clicked() {
                         let path = if is_mo2() {
                             PathBuf::from("").join("Data")
                         } else {
@@ -528,22 +544,26 @@ impl eframe::App for TemplateApp {
                                         if let Ok(lines) = read_lines(&mod_vm.path) {
                                             let mut map: Vec<String> = vec![];
                                             for line in lines.flatten() {
-                                                if let Some(pair) = line.strip_prefix("setgs ") {
+                                                if let Some(gmst_pair) =
+                                                    line.to_lowercase().strip_prefix("setgs ")
+                                                {
                                                     let splits =
-                                                        pair.split(' ').collect::<Vec<_>>();
+                                                        gmst_pair.split(' ').collect::<Vec<_>>();
                                                     if splits.len() == 2 {
                                                         let name = splits[0];
-                                                        if let Some(parsed) =
+                                                        if let Some(parsed_value) =
                                                             parse_gmst(name, splits[1])
                                                         {
                                                             //map.insert(name.to_owned(), parsed);
                                                             map.push(name.to_owned());
                                                             // change values
-                                                            if let Some(val) = gmst_vms
-                                                                .iter_mut()
-                                                                .find(|p| p.gmst.name == name)
+                                                            if let Some(val) =
+                                                                gmst_vms.iter_mut().find(|p| {
+                                                                    p.gmst.name.to_lowercase()
+                                                                        == name
+                                                                })
                                                             {
-                                                                val.gmst.value = parsed;
+                                                                val.gmst.value = parsed_value;
                                                             }
                                                         }
                                                     }
@@ -573,6 +593,7 @@ impl eframe::App for TemplateApp {
                     }
                 });
 
+                // start commandline
                 let mut start_command = get_command_line(
                     mods.iter()
                         .filter(|p| p.enabled)
@@ -583,23 +604,47 @@ impl eframe::App for TemplateApp {
                 ui.separator();
                 ui.horizontal(|ui| {
                     ui.label("Start commands: ");
-                    ui.add_enabled_ui(false, |ui| {
-                        ui.add_sized(
-                            ui.available_size(),
-                            egui::TextEdit::multiline(&mut start_command),
+                    //ui.add_enabled_ui(false, |ui| {
+                    ui.add_sized(
+                        ui.available_size(),
+                        egui::TextEdit::multiline(&mut start_command),
+                    );
+                    //});
+                });
+                ui.horizontal(|ui| {
+                    if ui.button("💾 Save to ini").clicked() {
+                        add_command_to_ini(
+                            toasts,
+                            mods.iter()
+                                .filter(|p| p.enabled)
+                                .map(|p| p.name.to_owned())
+                                .collect::<Vec<_>>()
+                                .as_slice(),
                         );
-                    });
+                    }
+                    // if ui.button("🗐 Copy to clipboard").clicked() {
+                    //     ui.output_mut(|o| o.copied_text = start_command);
+                    // }
                 });
 
+                // file text
                 if let Some(selected_mod) = selected_mod {
                     ui.separator();
-                    ui.label(selected_mod.name.to_owned());
-                    if let Some(mut mod_text) = selected_mod.txt.to_owned() {
-                        ui.add_enabled_ui(false, |ui| {
-                            ui.add_sized(
-                                ui.available_size(),
-                                egui::TextEdit::multiline(&mut mod_text),
-                            );
+                    ui.label(
+                        egui::RichText::new(selected_mod.name.to_owned())
+                            .strong()
+                            .size(14_f32),
+                    );
+                    if let Some(mod_text) = selected_mod.txt.to_owned() {
+                        ui.push_id("text_scroll", |ui| {
+                            egui::ScrollArea::vertical().show(ui, |ui| {
+                                //ui.add_enabled_ui(false, |ui| {
+                                ui.add_sized(
+                                    ui.available_size(),
+                                    egui::TextEdit::multiline(&mut mod_text.as_str()),
+                                );
+                                //});
+                            });
                         });
                     }
                 }
