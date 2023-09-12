@@ -544,11 +544,11 @@ impl eframe::App for TemplateApp {
                                         if let Ok(lines) = read_lines(&mod_vm.path) {
                                             let mut map: Vec<String> = vec![];
                                             for line in lines.flatten() {
-                                                if let Some(gmst_pair) =
-                                                    line.to_lowercase().strip_prefix("setgs ")
-                                                {
-                                                    let splits =
-                                                        gmst_pair.split(' ').collect::<Vec<_>>();
+                                                let lline = line.to_lowercase();
+                                                if lline.starts_with("setgs ") {
+                                                    let splits = &line["setgs ".len()..]
+                                                        .split(' ')
+                                                        .collect::<Vec<_>>();
                                                     if splits.len() == 2 {
                                                         let name = splits[0];
                                                         if let Some(parsed_value) =
@@ -557,11 +557,9 @@ impl eframe::App for TemplateApp {
                                                             //map.insert(name.to_owned(), parsed);
                                                             map.push(name.to_owned());
                                                             // change values
-                                                            if let Some(val) =
-                                                                gmst_vms.iter_mut().find(|p| {
-                                                                    p.gmst.name.to_lowercase()
-                                                                        == name
-                                                                })
+                                                            if let Some(val) = gmst_vms
+                                                                .iter_mut()
+                                                                .find(|p| p.gmst.name == name)
                                                             {
                                                                 val.gmst.value = parsed_value;
                                                             }
