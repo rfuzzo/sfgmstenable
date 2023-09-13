@@ -336,6 +336,7 @@ impl eframe::App for TemplateApp {
                         )
                         .clicked()
                     {
+                        // save file
                         let save_path = if is_mo2() {
                             PathBuf::from("")
                                 .join("Data")
@@ -344,9 +345,17 @@ impl eframe::App for TemplateApp {
                             PathBuf::from("").join(format!("{}.txt", BAT_NAME))
                         };
                         save_to_file(gmst_vms, &save_path);
-                        //add_command_to_ini(toasts, BAT_NAME);
-                        toasts.success(format!("Created file: {}", save_path.display()));
+                        if is_mo2() {
+                            save_to_file(
+                                gmst_vms,
+                                &PathBuf::from("").join(format!("{}.txt", BAT_NAME)),
+                            );
+                        }
+
+                        // refresh UI
                         *mods_option = Some(refresh_mods());
+
+                        toasts.success(format!("Created file: {}", save_path.display()));
                     }
                 });
             });
@@ -620,9 +629,6 @@ impl eframe::App for TemplateApp {
                                 .as_slice(),
                         );
                     }
-                    // if ui.button("🗐 Copy to clipboard").clicked() {
-                    //     ui.output_mut(|o| o.copied_text = start_command);
-                    // }
                 });
 
                 // file text
