@@ -559,7 +559,7 @@ impl eframe::App for TemplateApp {
                                                         .split(' ')
                                                         .collect::<Vec<_>>();
                                                     if splits.len() == 2 {
-                                                        let name = splits[0];
+                                                        let name = splits[0].trim_matches('"');
                                                         if let Some(parsed_value) =
                                                             parse_gmst(name, splits[1])
                                                         {
@@ -766,7 +766,10 @@ fn save_to_file(gmst_vms: &[GmstViewModel], path: &PathBuf) {
                 EGmstValue::Int(i) => i.to_string(),
                 EGmstValue::UInt(u) => u.to_string(),
             };
-            let line = format!("setgs {} {}", vm.gmst.name, valuestring);
+            let line = match vm.gmst.name.contains(':') {
+                true => format!("setgs \"{}\" {}", vm.gmst.name, valuestring),
+                false => format!("setgs {} {}", vm.gmst.name, valuestring),
+            };
             let _res = writeln!(file, "{}", line);
         }
     }
