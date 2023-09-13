@@ -46,6 +46,7 @@ bTargetingModeWeaponsFireUntilEmpty,False
 bThrottleDecreasesToMaxTurnRate:Controls,True
 bThrottleIncreasesToMaxTurnRate:Controls,False
 bWorkshopFixedPackinGrouping,True
+f3rdPersonAimDist:ThirdPersonCam,0.429
 f3rdPersonAimDist:ThirdPersonCam,0.43
 f3rdPersonAimDollySpeed:ThirdPersonCam,6.0
 f3rdPersonAimFOV:ThirdPersonCam,50.0
@@ -185,7 +186,9 @@ fAIMeleeWeaponMult,2.0
 fAIMinGreetingDistance,2.5
 fAIMinLocationHeight,100.0
 fAIMinRangeOverrideMod,0.5
+fAimModelAIAccuracyConeMaxExtentOffsetMax:AimModel,0.0
 fAimModelAIAccuracyConeMaxExtentOffsetMin:AimModel,10.0
+fAimModelAIAccuracyConeMinExtentOffsetMax:AimModel,0.0
 fAimModelAIAccuracyConeMinExtentOffsetMin:AimModel,5.0
 fAimModelAIIronSightsConeMult:AimModel,0.3
 fAimModelAIWeaponScopeConeMult:AimModel,0.05
@@ -200,6 +203,7 @@ fAimModelMaxConeSingleCrippledLimbMult:AimModel,2.0
 fAimModelMinConeMultipleCrippledLimbMult:AimModel,3.0
 fAimModelMinConeSingleCrippledLimbMult:AimModel,2.0
 fAimModelPlayer3rdSightsConeMultMin:AimModel,0.2
+fAimModelPlayerMovementIronSightsConeMult:AimModel,0.0
 fAimModelRecoilArcDegMultipleCrippledLimbMult:AimModel,3.0
 fAimModelRecoilArcDegSingleCrippledLimbMult:AimModel,2.0
 fAimModelRecoilDecreaseDelaySec:AimModel,0.2
@@ -354,6 +358,7 @@ fAVDOxygenMult,1.0
 fAVDUnarmedDamageMult,0.5
 fAvoidPlayerDistance,100.0
 fBaseCloudCardPivotEndAngle:Clouds,45.0
+fBaseCloudCardPivotStartAngle:Clouds,0.0
 fBaseCritChance:ResearchProject,0.1
 fBeamHighVariableIntensityColorB,0.2
 fBeamHighVariableIntensityColorG,0.2
@@ -494,6 +499,7 @@ fCloudBackScatter:Clouds,0.3
 fCloudCardBackScatter:Clouds,0.3
 fCloudCardForwardScatter:Clouds,0.6
 fCloudCardMaxPivotAngle:Clouds,45.0
+fCloudCardPhaseInfluence:Clouds,0.0
 fCloudCardScatterBlend:Clouds,0.4
 fCloudForwardScatter:Clouds,0.7
 fCloudPrewarmTime:Clouds,350.0
@@ -2589,6 +2595,7 @@ fCrowdDoorLocRadius:Crowd,2.0
 fCrowdDoorSecondsBetweenUses:Crowd,2.0
 fCrowdDoorSideOffset:Crowd,0.6
 fCrowdExtraTargetDensity:Crowd,0.0
+fCrowdExtraTargetDensity:Crowd,0.005
 fCrowdFleeAudioCooldownMax:Crowd,5.0
 fCrowdFleeAudioCooldownMin:Crowd,3.0
 fCrowdFleeCloseEnoughToDoorDistance:Crowd,10.0
@@ -2985,6 +2992,7 @@ fFlightCameraFOV:FlightCamera,90.0
 fFlightCameraFreeLookSensitivity:FlightCamera,2.0
 fFlightCameraFreeLookSpring:FlightCamera,150.0
 fFlightCameraMaxSpeedOffsetInterpolationValue:FlightCamera,7.0
+fFlightCameraOffsetBaseX:FlightCamera,0.0
 fFlightCameraOffsetBaseY:FlightCamera,-5.78
 fFlightCameraOffsetBaseZ:FlightCamera,5.11
 fFlightCameraOffsetMaxLandedDistance:FlightCamera,38.0
@@ -3013,6 +3021,7 @@ fFloatSpaceQuestMarkerMaxDistance,5000.0
 fFlyingActorDefaultTurningSpeed,1.57
 fFollowClampRecalcRadiusPathDistance,1.5
 fFollowerSpacingAtDoors,0.1
+fFollowerTeleportOffsetFudge:Pathfinding,0.429
 fFollowerTeleportOffsetFudge:Pathfinding,0.43
 fFollowExtraCatchUpSpeedMult,0.4
 fFollowformationDistPointMult,2.0
@@ -3405,6 +3414,7 @@ fMaxSandboxRescanSeconds,6.0
 fMaxScopeAdjustementAngle,10.0
 fMaxShipTransferDistance,500.0
 fMaxStealthinessRating,200.0
+fMaxTrackingTargetDistance:Spaceship,20143.125
 fMaxTrackingTargetDistance:Spaceship,20143.13
 fMaxTurnOnSpotRotationPerFrame,12.57
 fMaxUTHourPerLocalHour,100.0
@@ -3676,10 +3686,21 @@ fPlanetOceanHeight:Planet,-35.0
 fPlanetOxygenLevelHigh,21.0
 fPlanetOxygenLevelLow,2.0
 fPlanetOxygenLevelMedium,8.0
+fPlanetPreviewCameraLocationX:DataMenu,0.0
 fPlanetPreviewCameraLocationY:DataMenu,-10.0
+fPlanetPreviewCameraLocationZ:DataMenu,0.0
 fPlanetPreviewLightAtmosphereScale:DataMenu,7500.0
+fPlanetPreviewLightEulerXDegrees:DataMenu,0.0
+fPlanetPreviewLightEulerYDegrees:DataMenu,0.0
 fPlanetPreviewLightEulerZDegrees:DataMenu,-135.0
+fPlanetPreviewLightIntensity:DataMenu,0.025
 fPlanetPreviewLightIntensity:DataMenu,0.03
+fPlanetPreviewPlanetEulerXDegrees:DataMenu,0.0
+fPlanetPreviewPlanetEulerYDegrees:DataMenu,0.0
+fPlanetPreviewPlanetEulerZDegrees:DataMenu,0.0
+fPlanetPreviewPlanetLocationX:DataMenu,0.0
+fPlanetPreviewPlanetLocationY:DataMenu,0.0
+fPlanetPreviewPlanetLocationZ:DataMenu,0.0
 fPlanetPreviewPlanetScale:DataMenu,2.0
 fPlayerBaseSneakPerkMult,10.0
 fPlayerCoverGunBlockedDistance,1.5
@@ -3729,13 +3750,17 @@ fPlayerVelocityCacheTime,0.05
 fPlayerVelocitySampleInterval,0.05
 fPlayerVelocitySampleTime,1.0
 fPlayerZeroGAccelerationDampenTimeRank0:Controls,1.5
+fPlayerZeroGAccelerationDampenTimeRank1:Controls,2.625
 fPlayerZeroGAccelerationDampenTimeRank1:Controls,2.63
 fPlayerZeroGAccelerationDampenTimeRank2:Controls,3.75
+fPlayerZeroGAccelerationDampenTimeRank3:Controls,4.875
 fPlayerZeroGAccelerationDampenTimeRank3:Controls,4.88
 fPlayerZeroGAccelerationDampenTimeRank4:Controls,6.0
 fPlayerZeroGDecelerationDampenTimeRank0:Controls,0.5
+fPlayerZeroGDecelerationDampenTimeRank1:Controls,0.875
 fPlayerZeroGDecelerationDampenTimeRank1:Controls,0.88
 fPlayerZeroGDecelerationDampenTimeRank2:Controls,1.25
+fPlayerZeroGDecelerationDampenTimeRank3:Controls,1.625
 fPlayerZeroGDecelerationDampenTimeRank3:Controls,1.63
 fPlayerZeroGDecelerationDampenTimeRank4:Controls,2.0
 fPoisonArmorBaseFactor,0.0
@@ -4084,7 +4109,9 @@ fShipFlightCameraDOFFarOpacity:FlightCamera,10.0
 fShipFlightCameraDOFFarPlaneOffset:FlightCamera,100000.0
 fShipFlightCameraDOFFarStart:FlightCamera,1000000000.0
 fShipFlightCameraDOFNearEnd:FlightCamera,-18.17
+fShipFlightCameraDOFNearEnd:FlightCamera,-18.171
 fShipFlightCameraDOFNearOpacity:FlightCamera,10.0
+fShipFlightCameraDOFNearStart:FlightCamera,42.869999
 fShipFlightCameraDOFNearStart:FlightCamera,42.87
 fShipFlightCameraDOFStrength:FlightCamera,1.0
 fShipFlightCameraFreeLookFOVChangeSpeed:FlightCamera,0.3
@@ -4368,6 +4395,8 @@ fSpaceshipMinThrottleInputForMaxTurnScale,0.5
 fSpaceshipMinUnpoweredStopAcceleration,32.0
 fSpaceshipModelViewerMaxPitch:Spaceship,60.0
 fSpaceshipModelViewerMaxZoomFactor:Spaceship,75.0
+fSpaceshipModelViewerMinPitch:Spaceship,0.0
+fSpaceshipModelViewerMinZoomFactor:Spaceship,0.0
 fSpaceshipModelViewerStartPitch:Spaceship,15.0
 fSpaceshipModelViewerStartYaw:Spaceship,140.0
 fSpaceshipModelViewerStartZoomFactor:Spaceship,2.0
@@ -4444,7 +4473,10 @@ fStaggerMaxDuration,3.0
 fStaminaRegenDelayMax,5.0
 fStarfieldMotionBlurMaxBlur,0.1
 fStarMapGalaxyPanSpeed:StarMap,32.0
+fStarMapGalaxyStarfieldBackgroundRotationPitch:StarMap,0.0
+fStarMapGalaxyStarfieldBackgroundRotationRoll:StarMap,0.0
 fStarMapGalaxyStarfieldBackgroundRotationYaw:StarMap,-20.0
+fStarMapGalaxyStarfieldBackgroundScale:StarMap,0.0
 fStarMapGalaxyStarfieldSpaceGlowBackgroundScale:StarMap,20.0
 fStarMapGalaxyStarfieldStarBrightnessScale:StarMap,30.0
 fStarMapGalaxyStarfieldTransitionBlackDurationAsPercent:StarMap,0.3
@@ -5302,4 +5334,3 @@ uTextInputMenuDefaultMaxCharacter,26
 uWorkshopAutoFoundationMaxHeight,20
 uWorkshopBlueprintBudget,50
 uWorkshopMenuMaxRecentItems,50
-uWorkshopNumBlueprints,50
