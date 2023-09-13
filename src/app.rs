@@ -328,6 +328,15 @@ impl eframe::App for TemplateApp {
             // save buttons
             ui.add_enabled_ui(gmst_vms.iter().any(|p| p.is_edited), |ui| {
                 ui.horizontal(|ui| {
+                    let save_path = if is_mo2() {
+                        PathBuf::from("")
+                            .join("Data")
+                            .join(format!("{}.txt", BAT_NAME))
+                    } else {
+                        PathBuf::from("").join(format!("{}.txt", BAT_NAME))
+                    };
+
+                    // save file
                     if ui
                         .button(
                             egui::RichText::new("🖹 Create command file")
@@ -336,27 +345,71 @@ impl eframe::App for TemplateApp {
                         )
                         .clicked()
                     {
-                        // save file
-                        let save_path = if is_mo2() {
-                            PathBuf::from("")
-                                .join("Data")
-                                .join(format!("{}.txt", BAT_NAME))
-                        } else {
-                            PathBuf::from("").join(format!("{}.txt", BAT_NAME))
-                        };
-                        save_to_file(gmst_vms, &save_path);
+                        let map = gmst_vms
+                            .iter()
+                            .filter(|p| p.is_edited)
+                            .map(|p| (p.gmst.name.to_owned(), p.gmst.value))
+                            .collect::<HashMap<String, EGmstValue>>();
+                        save_to_file(&map, &save_path);
                         if is_mo2() {
                             save_to_file(
-                                gmst_vms,
+                                &map,
                                 &PathBuf::from("").join(format!("{}.txt", BAT_NAME)),
                             );
                         }
 
                         // refresh UI
                         *mods_option = Some(refresh_mods());
+                        if let Some(selected_mod) = selected_mod {
+                            if selected_mod.path == save_path {
+                                if let Ok(txt) =
+                                    std::fs::read_to_string(format!("{}.txt", BAT_NAME))
+                                {
+                                    selected_mod.txt = Some(txt);
+                                }
+                            }
+                        }
 
                         toasts.success(format!("Created file: {}", save_path.display()));
                     }
+
+                    // append to file
+                    ui.add_enabled_ui(save_path.exists(), |ui| {
+                        if ui
+                            .button(
+                                egui::RichText::new("➕ Append to command file")
+                                    .size(14.0)
+                                    .color(Color32::GREEN),
+                            )
+                            .clicked()
+                        {
+                            let mut new_gmsts = parse_file(&save_path);
+                            // add currently edited gmsts
+                            for g in gmst_vms.iter().filter(|p| p.is_edited) {
+                                new_gmsts.insert(g.gmst.name.to_owned(), g.gmst.value);
+                            }
+
+                            save_to_file(&new_gmsts, &save_path);
+                            if is_mo2() {
+                                save_to_file(
+                                    &new_gmsts,
+                                    &PathBuf::from("").join(format!("{}.txt", BAT_NAME)),
+                                );
+                            }
+
+                            if let Some(selected_mod) = selected_mod {
+                                if selected_mod.path == save_path {
+                                    if let Ok(txt) =
+                                        std::fs::read_to_string(format!("{}.txt", BAT_NAME))
+                                    {
+                                        selected_mod.txt = Some(txt);
+                                    }
+                                }
+                            }
+
+                            toasts.success(format!("Appended to file: {}", save_path.display()));
+                        }
+                    });
                 });
             });
 
@@ -535,8 +588,9 @@ impl eframe::App for TemplateApp {
 
                                 // mod name
                                 ui.label(mod_vm.name.to_owned());
+
+                                // show text
                                 if ui.button("🖹").clicked() {
-                                    // read file
                                     if let Ok(txt) = std::fs::read_to_string(&mod_vm.path) {
                                         mod_vm.txt = Some(txt);
                                         *selected_mod = Some(mod_vm.to_owned());
@@ -549,35 +603,16 @@ impl eframe::App for TemplateApp {
                                     .clicked()
                                 {
                                     if mod_vm.overlay_enabled {
-                                        // check if a gmst mod
-                                        if let Ok(lines) = read_lines(&mod_vm.path) {
-                                            let mut map: Vec<String> = vec![];
-                                            for line in lines.flatten() {
-                                                let lline = line.to_lowercase();
-                                                if lline.starts_with("setgs ") {
-                                                    let splits = &line["setgs ".len()..]
-                                                        .split(' ')
-                                                        .collect::<Vec<_>>();
-                                                    if splits.len() == 2 {
-                                                        let name = splits[0].trim_matches('"');
-                                                        if let Some(parsed_value) =
-                                                            parse_gmst(name, splits[1])
-                                                        {
-                                                            //map.insert(name.to_owned(), parsed);
-                                                            map.push(name.to_owned());
-                                                            // change values
-                                                            if let Some(val) = gmst_vms
-                                                                .iter_mut()
-                                                                .find(|p| p.gmst.name == name)
-                                                            {
-                                                                val.gmst.value = parsed_value;
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                                        let map = parse_file(&mod_vm.path);
+                                        mod_vm.gmsts =
+                                            map.iter().map(|f| f.0.to_owned()).collect::<Vec<_>>();
+                                        for gmst in map {
+                                            // change values
+                                            if let Some(val) =
+                                                gmst_vms.iter_mut().find(|p| p.gmst.name == gmst.0)
+                                            {
+                                                val.gmst.value = gmst.1;
                                             }
-                                            //*mod_gmst_vms = Some(map);
-                                            mod_vm.gmsts = map;
                                         }
                                     } else {
                                         // revert
@@ -658,6 +693,26 @@ impl eframe::App for TemplateApp {
         // notifications
         toasts.show(ctx);
     }
+}
+
+/// Parse a file for gmsts
+fn parse_file(path: &PathBuf) -> HashMap<String, EGmstValue> {
+    let mut map: HashMap<String, EGmstValue> = HashMap::default();
+    if let Ok(lines) = read_lines(path) {
+        for line in lines.flatten() {
+            let lline = line.to_lowercase();
+            if lline.starts_with("setgs ") {
+                let splits = &line["setgs ".len()..].split(' ').collect::<Vec<_>>();
+                if splits.len() == 2 {
+                    let name = splits[0].trim_matches('"');
+                    if let Some(parsed_value) = parse_gmst(name, splits[1]) {
+                        map.insert(name.to_owned(), parsed_value);
+                    }
+                }
+            }
+        }
+    }
+    map
 }
 
 /// Gets all txt file mods in the base dir.
@@ -754,21 +809,24 @@ fn get_bat_order() -> Option<Vec<String>> {
 }
 
 /// Saves currently edited GMSTs to a file
-fn save_to_file(gmst_vms: &[GmstViewModel], path: &PathBuf) {
+fn save_to_file(gmst_vms: &HashMap<String, EGmstValue>, path: &PathBuf) {
     // save to file
     if let Ok(mut file) = File::create(path) {
         // get all edited
-        for vm in gmst_vms.iter().filter(|p| p.is_edited) {
+        let mut gmsts = gmst_vms.iter().collect::<Vec<_>>();
+        gmsts.sort_by(|a, b| a.0.cmp(b.0));
+
+        for vm in gmsts {
             // write to file
-            let valuestring = match vm.gmst.value {
+            let valuestring = match vm.1 {
                 EGmstValue::Bool(b) => b.to_string(),
                 EGmstValue::Float(f) => f.to_string(),
                 EGmstValue::Int(i) => i.to_string(),
                 EGmstValue::UInt(u) => u.to_string(),
             };
-            let line = match vm.gmst.name.contains(':') {
-                true => format!("setgs \"{}\" {}", vm.gmst.name, valuestring),
-                false => format!("setgs {} {}", vm.gmst.name, valuestring),
+            let line = match vm.0.contains(':') {
+                true => format!("setgs \"{}\" {}", vm.0, valuestring),
+                false => format!("setgs {} {}", vm.0, valuestring),
             };
             let _res = writeln!(file, "{}", line);
         }
