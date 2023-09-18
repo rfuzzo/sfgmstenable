@@ -328,13 +328,7 @@ impl eframe::App for TemplateApp {
             // save buttons
             ui.add_enabled_ui(gmst_vms.iter().any(|p| p.is_edited), |ui| {
                 ui.horizontal(|ui| {
-                    let save_path = if is_mo2() {
-                        PathBuf::from("")
-                            .join("Data")
-                            .join(format!("{}.txt", BAT_NAME))
-                    } else {
-                        PathBuf::from("").join(format!("{}.txt", BAT_NAME))
-                    };
+                    let save_path = PathBuf::from("").join(format!("{}.txt", BAT_NAME));
 
                     // save file
                     if ui
@@ -351,12 +345,6 @@ impl eframe::App for TemplateApp {
                             .map(|p| (p.gmst.name.to_owned(), p.gmst.value))
                             .collect::<HashMap<String, EGmstValue>>();
                         save_to_file(&map, &save_path);
-                        if is_mo2() {
-                            save_to_file(
-                                &map,
-                                &PathBuf::from("").join(format!("{}.txt", BAT_NAME)),
-                            );
-                        }
 
                         // refresh UI
                         *mods_option = Some(refresh_mods());
@@ -390,12 +378,6 @@ impl eframe::App for TemplateApp {
                             }
 
                             save_to_file(&new_gmsts, &save_path);
-                            if is_mo2() {
-                                save_to_file(
-                                    &new_gmsts,
-                                    &PathBuf::from("").join(format!("{}.txt", BAT_NAME)),
-                                );
-                            }
 
                             if let Some(selected_mod) = selected_mod {
                                 if selected_mod.path == save_path {
@@ -526,11 +508,7 @@ impl eframe::App for TemplateApp {
                         *mods = refresh_mods();
                     }
                     if ui.button("🗁 Open folder").clicked() {
-                        let path = if is_mo2() {
-                            PathBuf::from("").join("Data")
-                        } else {
-                            PathBuf::from("")
-                        };
+                        let path = PathBuf::from("");
                         let _r = open::that(path);
                     }
                 });
@@ -547,42 +525,10 @@ impl eframe::App for TemplateApp {
                                 if ui.checkbox(&mut mod_vm.enabled, "").clicked() {
                                     if mod_vm.enabled {
                                         // copy file
-                                        if is_mo2() {
-                                            match std::fs::copy(&mod_vm.path, &mod_vm.name) {
-                                                Ok(_) => {
-                                                    toasts.success(format!(
-                                                        "{} enabled",
-                                                        mod_vm.name
-                                                    ));
-                                                }
-                                                Err(_) => {
-                                                    toasts.error(format!(
-                                                        "failed to install {}",
-                                                        mod_vm.name
-                                                    ));
-                                                }
-                                            }
-                                        } else {
-                                            toasts.success(format!("{} enabled", mod_vm.name));
-                                        }
+                                        toasts.success(format!("{} enabled", mod_vm.name));
                                     } else {
                                         // delete file
-                                        if is_mo2() {
-                                            match std::fs::remove_file(&mod_vm.name) {
-                                                Ok(_) => {
-                                                    toasts
-                                                        .info(format!("{} disabled", mod_vm.name));
-                                                }
-                                                Err(_) => {
-                                                    toasts.error(format!(
-                                                        "failed to remove {}",
-                                                        mod_vm.name
-                                                    ));
-                                                }
-                                            }
-                                        } else {
-                                            toasts.info(format!("{} disabled", mod_vm.name));
-                                        }
+                                        toasts.info(format!("{} disabled", mod_vm.name));
                                     }
                                 }
 
@@ -718,11 +664,7 @@ fn parse_file(path: &PathBuf) -> HashMap<String, EGmstValue> {
 /// Gets all txt file mods in the base dir.
 fn refresh_mods() -> Vec<ModViewModel> {
     let mut mod_map: Vec<ModViewModel> = vec![];
-    let path = if is_mo2() {
-        PathBuf::from("").join("Data")
-    } else {
-        PathBuf::from("")
-    };
+    let path = PathBuf::from("");
 
     for entry in read_dir(path).unwrap().flatten() {
         let path = entry.path();
@@ -940,11 +882,4 @@ fn theme_switch(ui: &mut egui::Ui, theme: &mut ETheme) {
             ui.selectable_value(theme, ETheme::Macchiato, "MACCHIATO");
             ui.selectable_value(theme, ETheme::Mocha, "MOCHA");
         });
-}
-
-fn is_mo2() -> bool {
-    if let Some(arg1) = env::args().nth(1) {
-        return arg1 == "--mo2";
-    }
-    false
 }

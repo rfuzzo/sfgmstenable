@@ -12,8 +12,6 @@ A simple UI to edit Starfield GMSTs and manage your bat file mods.
 
 ## Usage
 
-> ⚠️ You need to set `--mo2` when running this app through MO2
->
 > ⚠️ You need to set **Start in** to your base folder (e.g. `C:\Steam\steamapps\common\Starfield`) when running this app through MO2
 
 - download the zip file
