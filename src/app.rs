@@ -1,6 +1,7 @@
+use egui_notify::Toasts;
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::Display;
-use std::fs::read_dir;
 use std::io::Write;
 use std::{
     collections::HashMap,
@@ -9,10 +10,12 @@ use std::{
     path::PathBuf,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 use directories::UserDirs;
+#[cfg(not(target_arch = "wasm32"))]
 use egui::Color32;
-use egui_notify::Toasts;
-use serde::{Deserialize, Serialize};
+#[cfg(not(target_arch = "wasm32"))]
+use std::fs::read_dir;
 
 #[derive(Clone, Copy, serde::Deserialize, serde::Serialize, PartialEq)]
 pub enum EGmstValue {
@@ -258,8 +261,129 @@ impl eframe::App for TemplateApp {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
+    /// wasm
+    #[cfg(target_arch = "wasm32")]
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let Self {
+            theme,
+            mods: mods_option,
+            toasts,
+            default_gmsts,
+            gmst_vms,
+            search_filter,
+            display_edited,
+            scale,
+            selected_mod,
+        } = self;
+
+        catppuccin_egui::set_theme(ctx, get_theme(theme));
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            // Headers
+            ui.heading("GMSTs");
+            ui.separator();
+
+            // search bar
+            ui.horizontal(|ui| {
+                ui.label("Filter: ");
+                ui.text_edit_singleline(search_filter);
+                if ui.button("Clear").clicked() {
+                    *search_filter = "".to_owned();
+                }
+
+                let fiter_btn_text = match display_edited {
+                    false => "Show edited",
+                    true => "Show all",
+                };
+                ui.toggle_value(display_edited, fiter_btn_text);
+            });
+
+            ui.separator();
+
+            // main grid
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                egui::Grid::new("main_grid_id")
+                    .min_col_width(ROW_WIDTH)
+                    .show(ui, |ui| {
+                        // Values
+
+                        for vm in gmst_vms.iter_mut() {
+                            if !search_filter.is_empty()
+                                && !vm
+                                    .gmst
+                                    .name
+                                    .to_lowercase()
+                                    .contains(&search_filter.to_lowercase())
+                            {
+                                continue;
+                            }
+
+                            // get values
+                            if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
+                                vm.is_edited = !default_value.eq(&vm.gmst.value);
+                            }
+
+                            if *display_edited && !vm.is_edited {
+                                continue;
+                            }
+
+                            if vm.is_edited {
+                                ui.visuals_mut().override_text_color = Some(egui::Color32::GREEN);
+                            } else {
+                                ui.visuals_mut().override_text_color = None;
+                            }
+
+                            // edited checkbox
+                            ui.add_enabled_ui(false, |ui| {
+                                ui.checkbox(&mut vm.is_edited, "Edited");
+                            });
+
+                            // mod name
+                            let mut mod_name = vm.gmst.name.to_owned();
+                            if vm.is_edited {
+                                if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
+                                    mod_name = format!("{} ({})", mod_name, default_value);
+                                }
+                            }
+                            ui.label(mod_name);
+
+                            // mod value
+                            match vm.gmst.value {
+                                EGmstValue::Bool(mut b) => {
+                                    ui.checkbox(&mut b, "");
+                                    vm.gmst.value = EGmstValue::Bool(b);
+                                }
+                                EGmstValue::Float(mut f) => {
+                                    ui.add(egui::DragValue::new(&mut f).speed(0.1));
+                                    vm.gmst.value = EGmstValue::Float(f);
+                                }
+                                EGmstValue::Int(mut i) => {
+                                    ui.add(egui::DragValue::new(&mut i).speed(1));
+                                    vm.gmst.value = EGmstValue::Int(i);
+                                }
+                                EGmstValue::UInt(mut u) => {
+                                    ui.add(egui::DragValue::new(&mut u).speed(1));
+                                    vm.gmst.value = EGmstValue::UInt(u);
+                                }
+                            }
+
+                            // Reset
+                            if vm.is_edited && ui.button("Reset").clicked() {
+                                if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
+                                    vm.gmst.value = *default_value;
+                                }
+                            }
+
+                            ui.end_row();
+                        }
+                    });
+            });
+        });
+    }
+
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
+    #[cfg(not(target_arch = "wasm32"))]
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let Self {
             theme,
@@ -642,6 +766,7 @@ impl eframe::App for TemplateApp {
 }
 
 /// Parse a file for gmsts
+#[cfg(not(target_arch = "wasm32"))]
 fn parse_file(path: &PathBuf) -> HashMap<String, EGmstValue> {
     let mut map: HashMap<String, EGmstValue> = HashMap::default();
     if let Ok(lines) = read_lines(path) {
@@ -662,6 +787,7 @@ fn parse_file(path: &PathBuf) -> HashMap<String, EGmstValue> {
 }
 
 /// Gets all txt file mods in the base dir.
+#[cfg(not(target_arch = "wasm32"))]
 fn refresh_mods() -> Vec<ModViewModel> {
     let mut mod_map: Vec<ModViewModel> = vec![];
     let path = PathBuf::from("");
@@ -712,6 +838,7 @@ fn refresh_mods() -> Vec<ModViewModel> {
 
 // The output is wrapped in a Result to allow matching on errors
 // Returns an Iterator to the Reader of the lines of the file.
+#[cfg(not(target_arch = "wasm32"))]
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
     P: AsRef<std::path::Path>,
@@ -720,6 +847,7 @@ where
     Ok(io::BufReader::new(file).lines())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn get_bat_order() -> Option<Vec<String>> {
     // checks
     let Some(user_dirs) = UserDirs::new() else { return None; };
@@ -752,6 +880,7 @@ fn get_bat_order() -> Option<Vec<String>> {
 }
 
 /// Saves currently edited GMSTs to a file
+#[cfg(not(target_arch = "wasm32"))]
 fn save_to_file(gmst_vms: &HashMap<String, EGmstValue>, path: &PathBuf) {
     // save to file
     if let Ok(mut file) = File::create(path) {
@@ -778,6 +907,7 @@ fn save_to_file(gmst_vms: &HashMap<String, EGmstValue>, path: &PathBuf) {
 
 /// Saves all edited gmsts to a text file
 /// and registers that text file in the ini
+#[cfg(not(target_arch = "wasm32"))]
 fn add_command_to_ini(toasts: &mut Toasts, commands: &[String]) {
     // checks
     let Some(user_dirs) = UserDirs::new() else { return };
@@ -858,6 +988,7 @@ fn add_command_to_ini(toasts: &mut Toasts, commands: &[String]) {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn get_command_line(commands: &[String]) -> String {
     let mut collected_line = "".to_owned();
     for c in commands {
@@ -871,6 +1002,7 @@ fn get_command_line(commands: &[String]) -> String {
     start_command
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn theme_switch(ui: &mut egui::Ui, theme: &mut ETheme) {
     egui::ComboBox::from_label("Theme")
         .selected_text(format!("{:?}", theme))

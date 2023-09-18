@@ -17,6 +17,8 @@ egui-notify = { git = "https://github.com/ItsEthra/egui-notify" }
 serde = { version = "1", features = ["derive"] }
 catppuccin-egui = "3.0"
 env_logger = "0.10"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 directories = "5.0"
 egui_dnd = "0.5"
 open = "5"
@@ -30,3 +32,7 @@ opt-level = 2
 
 
 [patch.crates-io]
+
+# web:
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
