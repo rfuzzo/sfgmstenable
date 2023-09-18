@@ -734,7 +734,7 @@ fn refresh_mods() -> Vec<ModViewModel> {
                         mod_map.push(ModViewModel {
                             path: path.to_owned(),
                             name: name.to_str().unwrap().into(),
-                            enabled: PathBuf::from("").join(name).exists(),
+                            enabled: false,
                             overlay_enabled: false,
                             gmsts: vec![],
                             txt: None,
@@ -749,7 +749,8 @@ fn refresh_mods() -> Vec<ModViewModel> {
     if let Some(order) = get_bat_order() {
         let mut ordered: Vec<ModViewModel> = vec![];
         for o in order {
-            if let Some(found) = mod_map.iter().find(|p| p.name == o) {
+            if let Some(found) = mod_map.iter_mut().find(|p| p.name == format!("{}.txt", o)) {
+                found.enabled = true;
                 ordered.push(found.clone());
             }
         }
