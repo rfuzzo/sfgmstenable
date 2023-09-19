@@ -251,7 +251,7 @@ fn parse_gmst(name: &str, value: &str) -> Option<EGmstValue> {
 }
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-static ROW_WIDTH: f32 = 50_f32;
+//static ROW_WIDTH: f32 = 50_f32;
 static BAT_NAME: &str = "my_gmsts";
 //static BAT_NAME_MERGED: &str = "merged_gmsts";
 
@@ -279,105 +279,7 @@ impl eframe::App for TemplateApp {
         catppuccin_egui::set_theme(ctx, get_theme(theme));
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // Headers
-            ui.heading("GMSTs");
-            ui.separator();
-
-            // search bar
-            ui.horizontal(|ui| {
-                ui.label("Filter: ");
-                ui.text_edit_singleline(search_filter);
-                if ui.button("Clear").clicked() {
-                    *search_filter = "".to_owned();
-                }
-
-                let fiter_btn_text = match display_edited {
-                    false => "Show edited",
-                    true => "Show all",
-                };
-                ui.toggle_value(display_edited, fiter_btn_text);
-            });
-
-            ui.separator();
-
-            // main grid
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                egui::Grid::new("main_grid_id")
-                    .min_col_width(ROW_WIDTH)
-                    .show(ui, |ui| {
-                        // Values
-
-                        for vm in gmst_vms.iter_mut() {
-                            if !search_filter.is_empty()
-                                && !vm
-                                    .gmst
-                                    .name
-                                    .to_lowercase()
-                                    .contains(&search_filter.to_lowercase())
-                            {
-                                continue;
-                            }
-
-                            // get values
-                            if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
-                                vm.is_edited = !default_value.eq(&vm.gmst.value);
-                            }
-
-                            if *display_edited && !vm.is_edited {
-                                continue;
-                            }
-
-                            if vm.is_edited {
-                                ui.visuals_mut().override_text_color = Some(egui::Color32::GREEN);
-                            } else {
-                                ui.visuals_mut().override_text_color = None;
-                            }
-
-                            // edited checkbox
-                            ui.add_enabled_ui(false, |ui| {
-                                ui.checkbox(&mut vm.is_edited, "Edited");
-                            });
-
-                            // mod name
-                            let mut mod_name = vm.gmst.name.to_owned();
-                            if vm.is_edited {
-                                if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
-                                    mod_name = format!("{} ({})", mod_name, default_value);
-                                }
-                            }
-                            ui.label(mod_name);
-
-                            // mod value
-                            match vm.gmst.value {
-                                EGmstValue::Bool(mut b) => {
-                                    ui.checkbox(&mut b, "");
-                                    vm.gmst.value = EGmstValue::Bool(b);
-                                }
-                                EGmstValue::Float(mut f) => {
-                                    ui.add(egui::DragValue::new(&mut f).speed(0.1));
-                                    vm.gmst.value = EGmstValue::Float(f);
-                                }
-                                EGmstValue::Int(mut i) => {
-                                    ui.add(egui::DragValue::new(&mut i).speed(1));
-                                    vm.gmst.value = EGmstValue::Int(i);
-                                }
-                                EGmstValue::UInt(mut u) => {
-                                    ui.add(egui::DragValue::new(&mut u).speed(1));
-                                    vm.gmst.value = EGmstValue::UInt(u);
-                                }
-                            }
-
-                            // Reset
-                            if vm.is_edited && ui.button("Reset").clicked() {
-                                if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
-                                    vm.gmst.value = *default_value;
-                                }
-                            }
-
-                            ui.end_row();
-                        }
-                    });
-            });
+            show_gmst_list_only(ui, search_filter, display_edited, gmst_vms, default_gmsts);
         });
     }
 
@@ -436,6 +338,9 @@ impl eframe::App for TemplateApp {
                     ui.separator();
 
                     ui.heading(format!("⚠ This app needs to be run from the Starfield base directory!\nYou are in {}", cwd.display() ));
+                    ui.separator();
+
+                    show_gmst_list_only(ui, search_filter, display_edited, gmst_vms, default_gmsts );
                 });
                 return;
             }
@@ -541,7 +446,7 @@ impl eframe::App for TemplateApp {
             // main grid
             egui::ScrollArea::vertical().show(ui, |ui| {
                 egui::Grid::new("main_grid_id")
-                    .min_col_width(ROW_WIDTH)
+                    .num_columns(2)
                     .show(ui, |ui| {
                         // Values
 
@@ -763,6 +668,114 @@ impl eframe::App for TemplateApp {
         // notifications
         toasts.show(ctx);
     }
+}
+
+fn show_gmst_list_only(
+    ui: &mut egui::Ui,
+    search_filter: &mut String,
+    display_edited: &mut bool,
+    gmst_vms: &mut Vec<GmstViewModel>,
+    default_gmsts: &HashMap<String, EGmstValue>,
+) {
+    // Headers
+    ui.heading("GMSTs");
+    ui.separator();
+
+    // search bar
+    ui.horizontal(|ui| {
+        ui.label("Filter: ");
+        ui.text_edit_singleline(search_filter);
+        if ui.button("Clear").clicked() {
+            *search_filter = "".to_owned();
+        }
+
+        let fiter_btn_text = match display_edited {
+            false => "Show edited",
+            true => "Show all",
+        };
+        ui.toggle_value(display_edited, fiter_btn_text);
+    });
+
+    ui.separator();
+
+    // main grid
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        egui::Grid::new("main_grid_id")
+            .num_columns(2)
+            .show(ui, |ui| {
+                // Values
+
+                for vm in gmst_vms.iter_mut() {
+                    if !search_filter.is_empty()
+                        && !vm
+                            .gmst
+                            .name
+                            .to_lowercase()
+                            .contains(&search_filter.to_lowercase())
+                    {
+                        continue;
+                    }
+
+                    // get values
+                    if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
+                        vm.is_edited = !default_value.eq(&vm.gmst.value);
+                    }
+
+                    if *display_edited && !vm.is_edited {
+                        continue;
+                    }
+
+                    if vm.is_edited {
+                        ui.visuals_mut().override_text_color = Some(egui::Color32::GREEN);
+                    } else {
+                        ui.visuals_mut().override_text_color = None;
+                    }
+
+                    // edited checkbox
+                    ui.add_enabled_ui(false, |ui| {
+                        ui.checkbox(&mut vm.is_edited, "Edited");
+                    });
+
+                    // mod name
+                    let mut mod_name = vm.gmst.name.to_owned();
+                    if vm.is_edited {
+                        if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
+                            mod_name = format!("{} ({})", mod_name, default_value);
+                        }
+                    }
+                    ui.label(mod_name);
+
+                    // mod value
+                    match vm.gmst.value {
+                        EGmstValue::Bool(mut b) => {
+                            ui.checkbox(&mut b, "");
+                            vm.gmst.value = EGmstValue::Bool(b);
+                        }
+                        EGmstValue::Float(mut f) => {
+                            ui.add(egui::DragValue::new(&mut f).speed(0.1));
+                            vm.gmst.value = EGmstValue::Float(f);
+                        }
+                        EGmstValue::Int(mut i) => {
+                            ui.add(egui::DragValue::new(&mut i).speed(1));
+                            vm.gmst.value = EGmstValue::Int(i);
+                        }
+                        EGmstValue::UInt(mut u) => {
+                            ui.add(egui::DragValue::new(&mut u).speed(1));
+                            vm.gmst.value = EGmstValue::UInt(u);
+                        }
+                    }
+
+                    // Reset
+                    if vm.is_edited && ui.button("Reset").clicked() {
+                        if let Some(default_value) = default_gmsts.get(&vm.gmst.name) {
+                            vm.gmst.value = *default_value;
+                        }
+                    }
+
+                    ui.end_row();
+                }
+            });
+    });
 }
 
 /// Parse a file for gmsts
