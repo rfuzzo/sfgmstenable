@@ -1,25 +1,26 @@
 [package]
 name = "sf_gmst_editor"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["rfuzzo"]
 edition = "2021"
 
 [dependencies]
-egui = "0.22.0"
-eframe = { version = "0.22.0", default-features = false, features = [
-    "default_fonts", # Embed the default egui fonts.
-    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
-    "persistence",   # Enable restoring app state when restarting the app.
+egui = "0.23.0"
+eframe = { version = "0.23.0", default-features = false, features = [
+  "default_fonts", # Embed the default egui fonts.
+  "glow",          # Use the glow rendering backend. Alternative: "wgpu".
+  "persistence",   # Enable restoring app state when restarting the app.
 ] }
 log = "0.4"
-egui-notify = { git = "https://github.com/ItsEthra/egui-notify" }
+egui-notify = { git = "https://github.com/ItsEthra/egui-notify" } #, rev = "b2cb28c"
 serde = { version = "1", features = ["derive"] }
-catppuccin-egui = "3.0"
+catppuccin-egui = "3.1"
 env_logger = "0.10"
+toml = "0.8.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 directories = "5.0"
-egui_dnd = "0.5"
+egui_dnd = "0.5.0"
 open = "5"
 
 [profile.release]
