@@ -341,7 +341,7 @@ impl eframe::App for TemplateApp {
 
                                 // edited checkbox
                                 ui.add_enabled_ui(false, |ui| {
-                                    ui.checkbox(&mut vm.is_edited, "Edited");
+                                    ui.checkbox(&mut vm.is_edited, "");
                                 });
 
                                 // mod name
@@ -661,7 +661,7 @@ fn show_gmst_list_only(
 
                         // edited checkbox
                         ui.add_enabled_ui(false, |ui| {
-                            ui.checkbox(&mut vm.is_edited, "Edited");
+                            ui.checkbox(&mut vm.is_edited, "");
                         });
 
                         // mod name
