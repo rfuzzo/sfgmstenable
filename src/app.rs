@@ -118,7 +118,7 @@ impl eframe::App for TemplateApp {
             use_ccr,
         } = self;
 
-        catppuccin_egui::set_theme(ctx, get_theme(theme));
+        //catppuccin_egui::set_theme(ctx, get_theme(theme));
 
         egui::CentralPanel::default().show(ctx, |ui| {
             show_gmst_list_only(ui, search_filter, display_edited, gmst_vms, default_gmsts);
