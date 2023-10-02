@@ -226,26 +226,25 @@ impl eframe::App for TemplateApp {
                             .filter(|p| p.is_edited)
                             .map(|p| (p.gmst.name.to_owned(), p.gmst.value))
                             .collect::<HashMap<String, EGmstValue>>();
-                        save_to_file(toasts, &map, &save_path, *use_ccr);
 
-                        // refresh UI
-                        if *use_ccr {
-                            *ccr_mods_option = Some(refresh_mods(true));
-                        } else {
-                            *mods_option = Some(refresh_mods(false));
-                        }
+                        if save_to_file(toasts, &map, &save_path, *use_ccr) {
+                            // refresh UI
+                            if *use_ccr {
+                                *ccr_mods_option = Some(refresh_mods(*use_ccr));
+                            } else {
+                                *mods_option = Some(refresh_mods(*use_ccr));
+                            }
 
-                        if let Some(selected_mod) = selected_mod {
-                            if selected_mod.path == save_path {
-                                if let Ok(txt) =
-                                    std::fs::read_to_string(format!("{}.txt", BAT_NAME))
-                                {
-                                    selected_mod.txt = Some(txt);
+                            if let Some(selected_mod) = selected_mod {
+                                if selected_mod.path == save_path {
+                                    if let Ok(txt) = std::fs::read_to_string(save_path.clone()) {
+                                        selected_mod.txt = Some(txt);
+                                    }
                                 }
                             }
-                        }
 
-                        toasts.success(format!("Created file: {}", save_path.display()));
+                            toasts.success(format!("Created file: {}", save_path.display()));
+                        }
                     }
 
                     // append to file
@@ -264,19 +263,19 @@ impl eframe::App for TemplateApp {
                                 new_gmsts.insert(g.gmst.name.to_owned(), g.gmst.value);
                             }
 
-                            save_to_file(toasts, &new_gmsts, &save_path, *use_ccr);
-
-                            if let Some(selected_mod) = selected_mod {
-                                if selected_mod.path == save_path {
-                                    if let Ok(txt) =
-                                        std::fs::read_to_string(format!("{}.txt", BAT_NAME))
-                                    {
-                                        selected_mod.txt = Some(txt);
+                            if save_to_file(toasts, &new_gmsts, &save_path, *use_ccr) {
+                                if let Some(selected_mod) = selected_mod {
+                                    if selected_mod.path == save_path {
+                                        if let Ok(txt) = std::fs::read_to_string(save_path.clone())
+                                        {
+                                            selected_mod.txt = Some(txt);
+                                        }
                                     }
                                 }
-                            }
 
-                            toasts.success(format!("Appended to file: {}", save_path.display()));
+                                toasts
+                                    .success(format!("Appended to file: {}", save_path.display()));
+                            }
                         }
                     });
 

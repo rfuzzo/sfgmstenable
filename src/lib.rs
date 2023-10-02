@@ -247,13 +247,13 @@ pub struct CcrModel {
 #[cfg(not(target_arch = "wasm32"))]
 fn get_mods_folder(is_ccr: bool) -> PathBuf {
     if is_ccr {
-        PathBuf::from("./")
+        PathBuf::from("")
             .join("Data")
             .join("SFSE")
             .join("Plugins")
             .join("ConsoleCommandRunner")
     } else {
-        PathBuf::from("./")
+        PathBuf::from("")
     }
 }
 
@@ -401,8 +401,12 @@ fn save_to_file(
     gmst_vms: &HashMap<String, EGmstValue>,
     path: &PathBuf,
     use_ccr: bool,
-) {
+) -> bool {
     // save to file
+    if let Err(err) = std::fs::create_dir_all(path.parent().unwrap()) {
+        toasts.error(format!("Failed to write file: {}", err));
+        return false;
+    }
 
     if let Ok(mut file) = File::create(path) {
         // get all edited
@@ -436,15 +440,19 @@ fn save_to_file(
             let toml = toml::to_string_pretty(&model).unwrap();
             if let Err(err) = write!(file, "{}", toml) {
                 toasts.error(format!("Failed to write toml: {}", err));
+                return false;
             }
         } else {
             for line in commands {
                 if let Err(err) = writeln!(file, "{}", line) {
                     toasts.error(format!("Failed to write line: {}", err));
+                    return false;
                 }
             }
         }
+        return true;
     }
+    false
 }
 
 /// Saves all edited gmsts to a text file
@@ -488,16 +496,6 @@ fn add_command_to_ini(commands: &[String]) -> io::Result<()> {
                 needs_start_command = false;
 
                 // collect current commands
-
-                // let args_split: Vec<_> = args.split(';').collect();
-                // for arg in args_split {
-                //     let trimmed = arg.trim();
-                //     if trimmed != format!("bat {}", bat_name) {
-                //         collected_line += trimmed;
-                //         collected_line += ";";
-                //     }
-                // }
-
                 ini_lines.push(start_command.to_owned());
             } else {
                 // everything else gets saved
