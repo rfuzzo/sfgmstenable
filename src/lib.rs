@@ -279,7 +279,12 @@ fn refresh_mods(is_ccr: bool) -> Vec<ModViewModel> {
 #[cfg(not(target_arch = "wasm32"))]
 fn refresh_ccr_mods() -> Vec<ModViewModel> {
     let mut mod_map: Vec<ModViewModel> = vec![];
-    for entry in read_dir(get_mods_folder(true)).unwrap().flatten() {
+    let path = get_mods_folder(true);
+    if !path.exists() {
+        return mod_map;
+    }
+
+    for entry in read_dir(path).unwrap().flatten() {
         let path = entry.path();
         if path.exists() && path.is_file() {
             if let Some(name) = path.file_name() {
@@ -356,8 +361,12 @@ fn refresh_bat_mods() -> Vec<ModViewModel> {
 #[cfg(not(target_arch = "wasm32"))]
 fn get_bat_order() -> Option<Vec<String>> {
     // checks
-    let Some(user_dirs) = UserDirs::new() else { return None; };
-    let Some(documents) = user_dirs.document_dir() else { return None; };
+    let Some(user_dirs) = UserDirs::new() else {
+        return None;
+    };
+    let Some(documents) = user_dirs.document_dir() else {
+        return None;
+    };
     let sf_mygames_path = PathBuf::from(documents).join("My Games").join("Starfield");
     if !sf_mygames_path.exists() {
         return None;
